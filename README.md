@@ -46,6 +46,29 @@ and folder-oriented variants
 [`reversefoldersorter.php`](https://github.com/gasyoun/SanskritSorting/blob/master/reversefoldersorter.php))
 are also present for batch use.
 
+## Library (H6069)
+
+The sort-key normalization itself lives in ONE place since H6069:
+[`lib/SanskritSorting.php`](https://github.com/gasyoun/SanskritSorting/blob/master/lib/SanskritSorting.php) —
+extracted verbatim from the `multi13`/`reverse22` pipelines. It covers
+dictionary order, diacritics and spelling variants: fictitious anusvara →
+varga fifth letter (`saMkalpa` sorts as `saNkalpa`), terminal-halant/nukta
+markers, visarga position per Siddhānta Kaumudī 8.3.34–36, ṝ/lṝ placement,
+ळ/ळ्ह → ड/ढ position, OM, and marks ignored while sorting.
+
+```php
+require_once 'lib/SanskritSorting.php';
+$sorted = sanskrit_sorting_sort($lines);                 // forward
+$sorted = sanskrit_sorting_sort($lines, true);           // word endings
+$key    = sanskrit_sorting_key('saMkalpa');              // one sort key
+```
+
+All codepoint tables use single-quoted `'\uXXXX'` literals on purpose: the
+key is the `json_encode()` output (literal escape text), so tables and
+searches must denote that literal text — single quotes make the intent
+explicit and the behavior runtime-stable. Run the suite with
+`php tests/run_tests.php` (offline, no dependencies).
+
 ## Usage (command line)
 
 ```

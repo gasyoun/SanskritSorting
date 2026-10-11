@@ -30,6 +30,9 @@ error_reporting(0);
 // include files for conversion SLP and devanagari.
 include "dev-slp.php";
 include "slp-dev.php";
+// H6069: consolidated Devanagari sorting/normalization library (single home
+// for the sort-key pipeline shared with the multi* family).
+require_once __DIR__ . "/lib/SanskritSorting.php";
 
 $test = file($input);
 $orig = $test;
@@ -38,23 +41,7 @@ $test = array_map('convert',$test);
 
 // $count counts the number of members in the array $test
 $count = count($test);
-//array having consonants of devanagari converted to their unicode codepoint.
-$consonants = array("\u0915","\u0916","\u0917","\u0918","\u0919","\u091a","\u091b","\u091c","\u091d","\u091e","\u091f","\u0920","\u0921","\u0922","\u0923","\u0924","\u0925","\u0926","\u0927","\u0928","\u092a","\u092b","\u092c","\u092d","\u092e","\u092f","\u0930","\u0932","\u0935","\u0936","\u0937","\u0938","\u0939");    
-// $consonantreplace would be used to place the halant characters before akArAnta.  
-$consonantreplace = array("\u0915!","\u0916!","\u0917!","\u0918!","\u0919!","\u091a!","\u091b!","\u091c!","\u091d!","\u091e!","\u091f!","\u0920!","\u0921!","\u0922!","\u0923!","\u0924!","\u0925!","\u0926!","\u0927!","\u0928!","\u092a!","\u092b!","\u092c!","\u092d!","\u092e!","\u092f!","\u0930!","\u0932!","\u0935!","\u0936!","\u0937!","\u0938!","\u0939!");    
-// $kavarga to $pavarga are used to convert non-genuine anusvara to their corresponding fifth letter.
-$kavarga = array("\u0915","\u0916","\u0917","\u0918","\u0919",);
-$cavarga = array("\u091a","\u091b","\u091c","\u091d","\u091e",);
-$Tavarga = array("\u091f","\u0920","\u0921","\u0922","\u0923",);
-$tavarga = array("\u0924","\u0925","\u0926","\u0927","\u0928",);
-$pavarga = array("\u092a","\u092b","\u092c","\u092d","\u092e",);
-// $khar and $shar are used for correct placement of visargas.
-$khar = array("\u0916","\u092b","\u091b","\u0920","\u0925","\u091a","\u091f","\u0924","\u0915","\u092a","\u0936","\u0937","\u0938");
-$shar = array("\u0936","\u0937","\u0938");
-// $vowel is list of vowels in devanagari
-$vowel = array("\u093e","\u093f","\u0940","\u0941","\u0942","\u0943","\u0944","\u0945","\u0946","\u0947","\u0948","\u0949","\u094a","\u094b","\u094c"," ",);
-// $specialcharacters are the unicode codepoints of characters which you want to ignore during formatting. e.g. "�","?" etc. Put them here.
-$specialcharacters = array("\u00b0","\u221a","\u02da","\u0300","\u0301","\u0331",);
+// (varga/khar/shar/special tables and the sort-key normalization now live in lib/SanskritSorting.php -- H6069)
 
 // input the text file into an array.
 // Make sure to hit an enter at the last of your file. Otherwise the last word may be missed in sorting. 
@@ -717,173 +704,17 @@ if (preg_match('/[0-9]+/',$a[0]))
 // Thereafter we will echo only the $original, so that the original data is displayed on browser.
 
 
-/* Coding for accented marks */
-
-$c[$i] = str_replace(array("/<170/>","а","à","á","a̱","ā̱","ā́","ā̀","í̱","í","ì","ì̱","ī́","ī̀","u̱","ú","ù","ú̱","ū́","ū̀","è","é","ò","ó","ṛ́","ṛ́","ṝ","ç","१","२","३","४","५","६","७","८","९","०",),array("","a","a","a","a","ā","ā","ā","i","i","i","i","ī","ī","u","u","u","u","ū","ū","e","e","o","o","ṛ","ṛ","ṝ","ś","","","","","","","","","","",),$c[$i]);
-  // getting the Codepoint for the UTF 8 encoded text
-$c[$i] = convert($c[$i]);
-$c[$i] = json_encode($c[$i]);
-// removing the starting code point \ufeff . json_encode adds this \ufeef at the start of the string. Remove it. Otherwise sorting may go wrong.
-$c[$i] = str_replace ('"','',$c[$i]);
-$c[$i] = str_replace('\ufeff','',$c[$i]);
-$c[$i] = str_replace('\r\n','',$c[$i]);
-$c[$i] = str_replace("\u0902\0902","\u0902^",$c[$i]);
-$c[$i] = ltrim(chop($c[$i]));
-
-            /* Replacing nongenuine anusvaras. 
-             * Here \u0902 represents the anusvar in unicode devanagari.
-             * When it is followed by a kavarga letter, the fictitious anusvar is converted to (\u0919\u094d).
-             *Similarly when followed by a cavarga, Tavarga, tavarga and pavarga letter, the fictitious anusvar is converted.
-             */
-$k=0;
-While($k<5)
-{ $u=0;
-while ($u<16)
-{
-$c[$i]= str_replace("\u0902".$kavarga[$k],"\u0919\u094d".$kavarga[$k],$c[$i]);
-$c[$i]= str_replace("\u0902".$cavarga[$k],"\u091e\u094d".$cavarga[$k],$c[$i]);
-$c[$i]= str_replace("\u0902".$Tavarga[$k],"\u0923\u094d".$Tavarga[$k],$c[$i]);
-$c[$i]= str_replace("\u0902".$tavarga[$k],"\u0928\u094d".$tavarga[$k],$c[$i]);
-$c[$i]= str_replace("\u0902".$pavarga[$k],"\u092e\u094d".$pavarga[$k],$c[$i]);
-$u++;
-}
-$k++;
-}
-
-                /* code for placing terminal halant before akArAnta */ 
-
-// converting the terminal halant ($consontans + \u094d)  as ($consonantreplace + \u094d so as to place it before akArAnta consonant. 
-$q= 0;
-while($q<33)
-{
-$c[$i]= str_replace($consonants[$q].'\u094d\u200d',$consonants[$q].'\u094d',$c[$i]);
-$c[$i]= str_replace($consonants[$q].'\u094d"',$consonantreplace[$q].'\u094d"',$c[$i]);
-$c[$i]= str_replace($consonants[$q].'\u094d\r\n"',$consonantreplace[$q].'\u094d\r\n"',$c[$i]);
-$c[$i]= str_replace($consonants[$q].'\u094d\u200c\r\n"',$consonantreplace[$q].'\u094d\u200c\r\n"',$c[$i]);
-$c[$i]= str_replace($consonants[$q].'\u094d\u200c"',$consonantreplace[$q].'\u094d\u200c"',$c[$i]);
-//$c[$i]= str_replace($consonantreplace[$q].'\u094d\u200d\r\n"',$consonantreplace[$q].'\u094d\r\n"',$c[$i]);
-$q++;
-}
-
-            /* The code for deciding the position of visarga 
-             * This has been done with help of Siddhanta Kaumudi ( a textbook of sanskrit grammar)
-             */
-
-// visarjanIyasya saH (8.3.34) - visarga gets converted to 's' before $khar
-$k=0;
-while($k<13)
-{
-$c[$i]= str_replace("\u0903".$khar[$k],"\u0938\u094d".$khar[$k],$c[$i]);
-$k++;
-}
-// sharpare visarjanIyaH (8.3.35) - visarga-$khar-$shar gets converted to 's'-$khar-$shar
-$k=0;
-while($k<13)
-{
-    $j=0;
-    while($j<3)
-    {
-$c[$i]= str_replace("\u0938\u094d".$khar[$k]."\u094d".$shar[$j],"\u0903".$khar[$k]."\u094d".$shar[$j],$c[$i]);
-    $j++;
-    }
-$k++;
-}
-// vA shari (8.3.36) - visarga-$shar = visarga-$shar. Dictionaries seem to take this as mandatory, even though it is optional
-$k=0;
-while($k<3)
-{
-$c[$i]= str_replace("\u0938\u094d".$shar[$k],"\u0903".$shar[$k],$c[$i]);
-$k++;
-}
-// kharpare shari vA visargalopo vaktavyaH (8.3.36 vArtikA) e.g. rAmaH sthAtha = rAma sthAtA. (used in sentences and not in dictionaries. so not coded)
-// kupvoH HkHpau ca (8.3.37) - jihvAmUlIya and upadhmAnIya are not used in most of the dictionaries. so this is skipped.
-// so'padAdau (8.3.38), pAzakalpakakAmyeSviti vAcyam - These two rules specify that a visarga is converted to 's' when followed by 'pAza','kalpa','ka','kAmyac'. This has already been taken care of because we have already converted it to 's'.
-// ananvayasyeti vAcyam - the rule so'padAdau will not apply if the word is an avyaya. e.g. prAtaHkalpam. avyaya list has to be furnished.
-// kAmye roreveti vAcyam - this would entail the analysis of vibhaktis to identify whether this is 'ru' or not. We have not done it.
-// iNaH SaH (8.3.39) - in the rule 8.3.38, the 's' would be converted to 'S' if it is preceded by 'i'/'u'. Not done because we didnt do 8.3.38. And anyhow it would be converted by 'idudupadhasya cApratyayasya'.
-// namaspurasorgatyoH (8.3.41) - namas / puras would have 's' instead of visarga, if followed by 'pAza','kalpa','ka','kAmyac' and it has gati saJjJA. This has already been done. gati would be decided by sentence, therefore we dont need in dictionary.
-// idudupadhasya cApratyayasya (8.3.41) 'i'/'u'-visarga-'ka'/'pa' = 'i'/'u'-'Sha'-'ka'/'pa'. Here apratyayasya - the examples are seen only in sentences. so no need to bother about it right now.
-$k=0;
-while ($k<2) // the logic behind using only 2 insted of 4 is, because 's' would be converted to 'o' before ga,gha,ba,bha. It would no longer remain visarga/'s'
-{
-$c[$i]= str_replace("\u093f\u0938\u094d".$kavarga[$k],"\u093f\u0937\u094d".$kavarga[$k],$c[$i]);
-$c[$i]= str_replace("\u0941\u0938\u094d".$kavarga[$k],"\u0941\u0937\u094d".$kavarga[$k],$c[$i]);
-$c[$i]= str_replace("\u093f\u0938\u094d".$pavarga[$k],"\u093f\u0937\u094d".$pavarga[$k],$c[$i]);
-$c[$i]= str_replace("\u0941\u0938\u094d".$pavarga[$k],"\u0941\u0937\u094d".$pavarga[$k],$c[$i]);
-// 'ekadezazAstanimittakasya na Satvam | kaskAdiSu bhrAtuSputrazabdasya pAThAt' - not applicable because it is seen in sentences
-// 'muhusaH pratiSedhaH (vArtika) - muhuH doesn't get converted to muhuS.
-$c[$i] = str_replace("\u092e\u0941\u0939\u0941\u0937\u094d".$kavarga[$k],"\u092e\u0941\u0939\u0941\u0903".$kavarga[$k],$c[$i]);
-$c[$i] = str_replace("\u092e\u0941\u0939\u0941\u0937\u094d".$pavarga[$k],"\u092e\u0941\u0939\u0941\u0903".$pavarga[$k],$c[$i]);
-// 'tiraso'nyatarasyAm' (8.3.42). tiras - gets converted to visarga optionally. In dictionary all optional ones have to appear at their respective places instead of visarga place. So nothing remains to be done.
-// 'dvistrizcaturiti kRtvo'rthe (8.3.43) - not necessary as this would need sentence context. It is optional. so for our purpose, it will remain as 'dviSkaroti' etc.
-// 'isusoH sAmarthye (8.3.44) - this is optional. so it would remain as sarpiSkaroti. no need to change
-// 'nityam samAse'nuttarapadasy (8.3.45) - not necessary. We have already converted it to 'sarpiSkuNDikA'. 
-// 'ataH kRkamikaMsakumbhapAtrakuzAkarNISvanavyayasya' (8.3.46) - This has already been done. To prevent conversion in case of avyaya (anavyayasya) we need to have list of avyayas.
-// 'adhazzirasI pade' - adhaH + pada -> adhaspada, ziras + pada -> ziraspada
-$c[$i] = str_replace("\u0905\u0927\u0903\u092a\u0926","\u0905\u0927\u0938\u094d\u092a\u0926",$c[$i]);
-$k++;
-
-}
-// patching up for different z,S,s which might be necessary in some cases
-/*$c[$i] = str_replace("\u0903\u0936","\u0936\u094d\u0936^",$c[$i]);
-$c[$i] = str_replace("\u0903\u0937","\u0937\u094d\u0937^",$c[$i]);
-$c[$i] = str_replace("\u0903\u0938","\u0938\u094d\u0938^",$c[$i]);*/
-
-
-                /* coding for correct position of RU,lR lRU */ 
-
-// patching up for RU, lR, lRU etc. (By default these rare vowel signs are sorted after the whole consonants. We want to position them at their proper place.
-$c[$i] = str_replace("\u0960","\u090b^",$c[$i]);
-$c[$i] = str_replace("\u0961","\u090c^",$c[$i]);
-$c[$i] = str_replace("\u0962","\u0944^",$c[$i]);
-$c[$i] = str_replace("\u0963","\u0944_",$c[$i]);
-
-               /* Coding for correcting the position of anusvAra and visarga between "au" and "ka" in reverse order. */
-$c[$i] = str_replace("\u0902\u0902","\u0914!",$c[$i]);
-$c[$i] = str_replace("\u0902","\u0914^",$c[$i]);
-$c[$i] = str_replace("\u0903","\u0914_",$c[$i]);
-
-               /* Coding for correcting the position of L and | (ळ and ळ्ह) */
-$c[$i] = str_replace("\u0933\u094d\u0939","\u0922^",$c[$i]);
-$c[$i] = str_replace("\u0933","\u0921^",$c[$i]);
-
-                /* coding for OM */
-$c[$i] = str_replace("\u0950","\u0913\u0902",$c[$i]);
-                /* coding for tilde */
-$c[$i] = str_replace("\u007e","\u0902",$c[$i]);
-
-    /* Patch for an input source where MM stands for the anunAsika and not two anusvAras */
-
+/* Sort-key normalization now consolidated in lib/SanskritSorting.php (H6069):
+ * accented marks, anusvara->varga, terminal halant marker, visarga sandhi
+ * (Siddhanta Kaumudi 8.3.34-36), RU/lR placement, anusvara/visarga position,
+ * L/lh (ळ/ळ्ह), OM, tilde, ignored special characters. */
+$c[$i] = sanskrit_sorting_key($c[$i], array('halant_loop' => true, 'tilde_to_anusvara' => true));
 $original[$i] = str_replace("ंं","ँ",$original[$i]);
-
-                /* Coding for special characters, which are to be ignored while sorting */
-
-// This is very important section. There are certain characters which you would like to ignore while formatting. e.g. "�" (\u00b0), "?" (\u221a) etc.
-// Put these in the $specialcharacters section at the starting of code.
-// Here we replace $specialcharacters with "" (null). Therefore, they are removed from $c and sorting will be fine.
-// Bear in mind that at the same time $original has all the characters intact. Therefore we could afford to delete them in $c.
-// At the end we will be calling only $original. Therefore removal of these characters from $c will not affect the output.
-
-$l=0;
-while ($l<count($specialcharacters))
-{$c[$i] = str_replace($specialcharacters[$l],"",$c[$i]);$l++;}
-
-                
-
-                    /* Coding for reversing */
-
-// the $c[$i] is broken into an array $a by delimiter "\". Wherever \ occurs, it will create a separate item. 
-// e.g. \u0000\u0001 will be converted to an array of "","u0000" and "u0001".
-$a = explode('\\',$c[$i]);
-// reversing the array $a. therefore output will be an array of "u0001","u0000" and "".
-$b = array_reverse($a);
-// This deletes the last empty element "". Therefore the output will be something like "u0001" and "u0000" only 2 elements in the array.
-array_pop($b);
-// This will convert the array into a string with joining element as "\". Therefore the output will be u0001\u0000. This string will be sorted now.
-$c[$i] = implode("\\",$b); 
-//echo $c[$i]."</br>";
+// word-endings sort key: reverse the codepoint groups (was inline).
+$c[$i] = sanskrit_sorting_reverse_key($c[$i]);
 $i++;
 }
+
 
 // creating a multidimentional array $araay which contains $c,$original, $pre and $post.
 $i=0;
@@ -895,20 +726,10 @@ $array[$i] = array('$c' => $c[$i], '$original' => $orig[$i], '$pre' => $pre[$i] 
 $i++;
 }
 
-function build_sorter($key) {
-    return function ($a, $b) use ($key) {
-        return strcmp($a[$key], $b[$key]);
-    };
-}
 
-function build_sorter1($key) {
-    return function ($a, $b) use ($key) {
-        return strcmp($b[$key], $a[$key]);
-    };
-}
 
 // Sorting $array by $c.
-usort($array, build_sorter('$c'));
+usort($array, sanskrit_sorting_build_sorter('$c'));
 
 
 
@@ -1059,7 +880,7 @@ for($i=0;$i<count($pratyayas);$i++)
 {
     $array1[$i] = array('$pratyayas' => $pratyayas[$i], '$pratyayasslp' => $pratyayasslp[$i], '$lengthpratyayas' => $lengthpratyayas[$i] );
 }
-usort($array1, build_sorter1('$lengthpratyayas'));
+usort($array1, sanskrit_sorting_build_sorter1('$lengthpratyayas'));
     foreach ($outputtext as $val1)
     {
         if (strpos($val1,'ळ्ह')!==false )
@@ -1219,21 +1040,6 @@ function addhash($text)
 $text = "#".$text."#";
 $text = str_replace("#|","|",$text);
 $text = str_replace("|#","|",$text);
-return $text;
-}
-function removeaccent($text)
-{
-$text = stripslashes($text);
-    $a=array("\\","/","^","-","°","*","(",")","[","]","-","?");
-    $b=array("","","","","","","","","","","","");
-$text = str_replace($a,$b,$text);
-return $text;
-}
-function addaccent($text)
-{
-    $a=array("a\\","a/","a^","ā\\","ā/","ā^","i\\","i/","i^","ī\\","ī/","ī^","u\\","u/","u^","ū\\","ū/","ū^","ṛ\\","ṛ/","ṛ^","ṝ\\","ṝ/","ṝ^","ḷ\\","ḷ/","ḷ^","e\\","e/","e^","o\\","o/","o^",);
-    $b=array("à","á","â","ā̀","ā́","ā̂","ì","í","î","ī̀","ī́","ī̂","ù","ú","û","ū̀","ū́","ū̂","ṛ̀","ṛ́","ṛ̂","ṝ̀","ṝ́","ṝ̂","ḷ̀","ḷ́","ḷ̂","è","é","ê","ò","ó","ô");
-$text = str_replace($a,$b,$text);
 return $text;
 }
 ?>

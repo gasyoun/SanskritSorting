@@ -64,9 +64,9 @@ $key    = sanskrit_sorting_key('saMkalpa');              // one sort key
 ```
 
 All codepoint tables use single-quoted `'\uXXXX'` literals on purpose: the
-key is the `json_encode()` output (literal escape text), and the original
-scripts' double-quoted tables silently no-oped on PHP 7+ — the library
-restores the original PHP 5 semantics on any runtime. Run the suite with
+key is the `json_encode()` output (literal escape text), so tables and
+searches must denote that literal text — single quotes make the intent
+explicit and the behavior runtime-stable. Run the suite with
 `php tests/run_tests.php` (offline, no dependencies).
 
 ## Usage (command line)

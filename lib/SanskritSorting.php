@@ -7,13 +7,15 @@
  * normalization lives in ONE place instead of being duplicated per numbered
  * script revision.
  *
- * IMPORTANT (PHP 7+ migration note): every \uXXXX codepoint literal below is
+ * IMPORTANT (quote-style note): every \uXXXX codepoint literal below is
  * SINGLE-quoted on purpose. The sort key is the json_encode() output, which
  * contains literal backslash escape TEXT (e.g. "\u0915" as 6 characters).
- * The original scripts' double-quoted "\u0915" tables only matched that text
- * on PHP 5 (before double-quoted \u escapes existed); on PHP 7+ they became
- * real Devanagari characters and the whole normalization silently no-oped.
- * Single-quoted literals restore the original PHP 5 behavior on any runtime.
+ * Brace-less "\u0915" in double quotes is literal text on every PHP version
+ * (only the \u{...} brace form is an escape), so tables and searches must
+ * denote that literal text; single quotes make the intent explicit and the
+ * behavior runtime-stable. (H6069 verifier correction: there was never a
+ * PHP 5 vs PHP 7 behavioral split here — this is a clarity fix, not a
+ * semantic repair.)
  *
  * This code derives from Dr. Dhaval Patel, www.sanskritworld.in
  * (upstream drdhaval2785/SanskritSorting), free to use, modify or alter for
